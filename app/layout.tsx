@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Amiri } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { AuthProvider } from "@/lib/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,8 +51,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${amiri.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#FDF8F3]">
-        {children}
+      <body className="min-h-full flex flex-col bg-[#F9F4ED]">
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <Toaster position="top-center" richColors closeButton />
       </body>
     </html>

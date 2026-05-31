@@ -85,13 +85,17 @@ export function useNearbyMandi(): UseNearbyMandiResult {
           let photoUrl: string | undefined;
 
           try {
-            // If photos weren't returned in the initial search, fetch them explicitly
-            if (!place.photos?.length) {
+            // Ensure we have photos
+            if (!place.photos || place.photos.length === 0) {
               await place.fetchFields({ fields: ['photos'] });
             }
 
-            if (place.photos?.length > 0) {
-              photoUrl = place.photos[0].getURI({ maxHeight: 600, maxWidth: 800 });
+            if (place.photos && place.photos.length > 0) {
+              // Use a good size for card display (balanced quality vs speed)
+              photoUrl = place.photos[0].getURI({ 
+                maxHeight: 800, 
+                maxWidth: 1200 
+              });
             }
           } catch (photoErr) {
             console.warn('Photo fetch failed for place', place.id, photoErr);
