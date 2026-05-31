@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C45C26"/>
+      <stop offset="100%" stop-color="#9C451C"/>
+    </linearGradient>
+  </defs>
+  <!-- Plate -->
+  <circle cx="256" cy="256" r="210" fill="#FDF8F3" stroke="#2C2522" stroke-width="28"/>
+  <!-- Compass rose inside plate -->
+  <g fill="#C45C26">
+    <polygon points="256,120 270,240 256,256 242,240"/>
+    <polygon points="256,392 242,272 256,256 270,272"/>
+    <polygon points="120,256 240,242 256,256 240,270"/>
+    <polygon points="392,256 272,270 256,256 272,242"/>
+  </g>
+  <circle cx="256" cy="256" r="38" fill="#2C2522"/>
+  <circle cx="256" cy="256" r="18" fill="#FDF8F3"/>
+</svg>
