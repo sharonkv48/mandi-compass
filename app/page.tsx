@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  MapPin, Compass, Award, BookOpen, ArrowRight, X, Camera, Share2, 
-  RotateCcw, Target 
+  MapPin, Compass, Award, BookOpen, ArrowRight, X, Camera, 
+  RotateCcw, Target, Trophy 
 } from 'lucide-react';
 import { MandiMap } from '@/components/MandiMap';
 import { useNearbyMandi } from '@/hooks/useNearbyMandi';
@@ -738,7 +738,7 @@ export default function MandiCompassApp() {
             <div className="text-center text-[10px] text-[#6B5F55] mt-8">
               {isInRealMode 
                 ? "Showing spots from Google Places near your location." 
-                : "Real version uses Google Places “mandi” + “yemeni restaurant” near you."}
+                : "Real version uses Google Places \"mandi\" + \"yemeni restaurant\" near you."}
             </div>
           </div>
         )}
@@ -757,65 +757,184 @@ export default function MandiCompassApp() {
               </div>
             ) : (
               <>
-                <div className="text-center mb-1">
+                <div className="text-center mb-3">
                   <div className="text-[#C45C26] text-xs tracking-[1.5px]">YOUR QUEST</div>
                   <div className="text-2xl font-semibold tracking-[-0.5px] mt-0.5">{quest.activeSpot.name}</div>
                   <div className="text-sm text-[#6B5F55]">{quest.activeSpot.address}</div>
                 </div>
 
-                {/* THE BIG COMPASS — Premium Instrument */}
-                <div 
-                  className="compass-container relative w-[min(85vw,300px)] h-[min(85vw,300px)] rounded-full mt-5 flex items-center justify-center cursor-pointer select-none active:scale-[0.985] transition-all duration-200"
+                {/* ═══════════════════════════════════════════════════
+                    THE REAL COMPASS
+                    - Outer bezel: fixed, shows the tannour direction label
+                    - Compass rose: rotates counter to device heading → always
+                      shows N pointing to magnetic North (like a real compass)
+                    - Needle: red tip points toward the quest target,
+                      dark tail points away — classic bi-color compass needle
+                ═══════════════════════════════════════════════════ */}
+                <div
+                  className="compass-container relative select-none"
+                  style={{ width: 'min(88vw, 310px)', height: 'min(88vw, 310px)', borderRadius: '50%' }}
                   onClick={handleManualCompass}
-                  title="Tap to manually rotate"
+                  title={manualHeading !== null ? 'Tap to set heading manually' : 'Tap to set heading manually (no sensor detected)'}
                 >
-                  {/* Outer rings for depth */}
-                  <div className="absolute inset-2 rounded-full border border-[#1F1A17]/10" />
-                  <div className="absolute inset-4 rounded-full border border-[#1F1A17]/5" />
-                  
-                  {/* Cardinal directions */}
-                  {['N', 'E', 'S', 'W'].map((dir, i) => (
-                    <div key={i} className="absolute text-xs font-mono text-[#8A7665] tracking-[1px]"
-                      style={{ 
-                        top: i === 0 ? 22 : i === 2 ? 'auto' : '50%', 
-                        bottom: i === 2 ? 22 : 'auto',
-                        left: i === 3 ? 26 : i === 1 ? 'auto' : '50%',
-                        right: i === 1 ? 26 : 'auto',
-                        transform: i % 2 === 1 ? 'translateY(-50%)' : 'translateX(-50%)'
-                      }}>
-                      {dir}
-                    </div>
-                  ))}
-
-                  {/* Rotating Needle */}
-                  <motion.div 
-                    className="compass-needle absolute leading-none z-10"
-                    style={{ 
-                      fontSize: 'clamp(5rem, 24vw, 7.5rem)',
-                      transform: `rotate(${needleRotation}deg)` 
-                    }}
-                    animate={{ rotate: needleRotation }}
-                    transition={{ type: "spring", stiffness: 55, damping: 16 }}
+                  {/* ── Degree tick marks ring (fixed, doesn't rotate) ── */}
+                  <svg
+                    className="absolute inset-0 w-full h-full"
+                    viewBox="0 0 310 310"
+                    style={{ pointerEvents: 'none' }}
                   >
-                    ↑
+                    {/* Subtle outer shadow ring */}
+                    <circle cx="155" cy="155" r="150" fill="none" stroke="#1F1A17" strokeWidth="0.6" strokeOpacity="0.12" />
+                    <circle cx="155" cy="155" r="144" fill="none" stroke="#1F1A17" strokeWidth="0.4" strokeOpacity="0.07" />
+
+                    {/* Tick marks — 72 ticks (every 5°) */}
+                    {Array.from({ length: 72 }).map((_, i) => {
+                      const angle = (i * 5 * Math.PI) / 180;
+                      const isMajor = i % 9 === 0;  // every 45°
+                      const isMedium = i % 3 === 0; // every 15°
+                      const r1 = 150;
+                      const r2 = isMajor ? 136 : isMedium ? 140 : 143;
+                      const x1 = 155 + r1 * Math.sin(angle);
+                      const y1 = 155 - r1 * Math.cos(angle);
+                      const x2 = 155 + r2 * Math.sin(angle);
+                      const y2 = 155 - r2 * Math.cos(angle);
+                      return (
+                        <line
+                          key={i}
+                          x1={x1} y1={y1} x2={x2} y2={y2}
+                          stroke="#1F1A17"
+                          strokeWidth={isMajor ? 1.8 : isMedium ? 1.1 : 0.7}
+                          strokeOpacity={isMajor ? 0.35 : isMedium ? 0.22 : 0.13}
+                        />
+                      );
+                    })}
+                  </svg>
+
+                  {/* ── ROTATING COMPASS ROSE ──
+                      Rotates by -currentHeading so that N always points to
+                      magnetic north (the rose spins, the bezel stays fixed). */}
+                  <motion.div
+                    className="absolute inset-0"
+                    animate={{ rotate: -currentHeading }}
+                    transition={{ type: 'spring', stiffness: 60, damping: 18, mass: 0.8 }}
+                    style={{ transformOrigin: 'center' }}
+                  >
+                    <svg
+                      className="absolute inset-0 w-full h-full"
+                      viewBox="0 0 310 310"
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      {/* Cardinal N — red for North */}
+                      <text x="155" y="30" textAnchor="middle" dominantBaseline="middle"
+                        fill="#B4532A" fontSize="15" fontWeight="700" fontFamily="monospace"
+                        letterSpacing="1">
+                        N
+                      </text>
+                      {/* Cardinal S */}
+                      <text x="155" y="282" textAnchor="middle" dominantBaseline="middle"
+                        fill="#5C5148" fontSize="13" fontWeight="600" fontFamily="monospace">
+                        S
+                      </text>
+                      {/* Cardinal E */}
+                      <text x="280" y="155" textAnchor="middle" dominantBaseline="middle"
+                        fill="#5C5148" fontSize="13" fontWeight="600" fontFamily="monospace">
+                        E
+                      </text>
+                      {/* Cardinal W */}
+                      <text x="30" y="155" textAnchor="middle" dominantBaseline="middle"
+                        fill="#5C5148" fontSize="13" fontWeight="600" fontFamily="monospace">
+                        W
+                      </text>
+                      {/* Intercardinals */}
+                      {[['NE', 45], ['SE', 135], ['SW', 225], ['NW', 315]].map(([label, deg]) => {
+                        const rad = (Number(deg) * Math.PI) / 180;
+                        const r = 128;
+                        const x = 155 + r * Math.sin(rad);
+                        const y = 155 - r * Math.cos(rad);
+                        return (
+                          <text key={label} x={x} y={y} textAnchor="middle" dominantBaseline="middle"
+                            fill="#8A7665" fontSize="9" fontWeight="500" fontFamily="monospace">
+                            {label}
+                          </text>
+                        );
+                      })}
+                      {/* Subtle cross lines through center */}
+                      <line x1="155" y1="38" x2="155" y2="272" stroke="#1F1A17" strokeWidth="0.5" strokeOpacity="0.07" />
+                      <line x1="38" y1="155" x2="272" y2="155" stroke="#1F1A17" strokeWidth="0.5" strokeOpacity="0.07" />
+                    </svg>
                   </motion.div>
 
-                  {/* Refined center hub */}
-                  <div className="absolute w-8 h-8 bg-[#1F1A17] rounded-full z-20 flex items-center justify-center ring-[6px] ring-[#F9F4ED]">
-                    <div className="w-2 h-2 bg-[#C5A46E] rounded-full" />
+                  {/* ── NEEDLE — rotates to point at the quest target ──
+                      needleRotation = (liveBearing - currentHeading + 360) % 360
+                      When 0 → needle points straight up → you're facing the target. */}
+                  <motion.div
+                    className="absolute inset-0 flex items-center justify-center"
+                    animate={{ rotate: needleRotation }}
+                    transition={{ type: 'spring', stiffness: 55, damping: 15, mass: 0.7 }}
+                    style={{ transformOrigin: 'center', zIndex: 10 }}
+                  >
+                    <svg
+                      viewBox="0 0 44 110"
+                      style={{ width: 44, height: 110 }}
+                      overflow="visible"
+                    >
+                      {/* Red (North / target) half */}
+                      <path
+                        d="M22 4 L28 55 L22 51 L16 55 Z"
+                        fill="#B4532A"
+                        filter="url(#needle-shadow)"
+                      />
+                      {/* Dark (South / away) half */}
+                      <path
+                        d="M22 106 L28 55 L22 59 L16 55 Z"
+                        fill="#2C2522"
+                      />
+                      {/* Center disc */}
+                      <circle cx="22" cy="55" r="5" fill="#1F1A17" />
+                      <circle cx="22" cy="55" r="2.5" fill="#C5A46E" />
+                      <defs>
+                        <filter id="needle-shadow" x="-50%" y="-20%" width="200%" height="140%">
+                          <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#000" floodOpacity="0.25" />
+                        </filter>
+                      </defs>
+                    </svg>
+                  </motion.div>
+
+                  {/* ── Fixed outer center hub ring ── */}
+                  <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 20, pointerEvents: 'none' }}>
+                    <div className="w-4 h-4 rounded-full bg-[#F9F4ED] ring-[3px] ring-[#1F1A17]/20" />
                   </div>
 
-                  {/* Alignment indicator */}
+                  {/* ── Alignment glow ring ── */}
                   {isCurrentlyAligned && (
-                    <div className="aligned absolute inset-10 rounded-full border-[3px] border-[#3F5C42]" />
+                    <div
+                      className="aligned absolute rounded-full pointer-events-none"
+                      style={{
+                        inset: '10%',
+                        border: '2.5px solid #3F5C42',
+                        boxShadow: '0 0 18px 4px rgba(63,92,66,0.22)',
+                      }}
+                    />
                   )}
                 </div>
 
-                {/* Small inset map showing the target + your location (when real data) */}
+                {/* ── Heading readout (below compass) ── */}
+                <div className="mt-3 flex items-center gap-3 text-[11px] font-mono text-[#8A7665] tracking-wider">
+                  <span>HDG {Math.round(currentHeading)}°</span>
+                  <span className="opacity-40">·</span>
+                  <span>BRG {Math.round(liveBearing)}°</span>
+                  {manualHeading !== null && (
+                    <button onClick={resetManual} className="flex items-center gap-1 text-[#C45C26] text-[10px]">
+                      <RotateCcw className="w-3 h-3" /> reset
+                    </button>
+                  )}
+                </div>
+
+                {/* Small inset map showing the target + your location */}
                 {quest.activeSpot && (
-                  <div className="mt-4 w-full max-w-[min(85vw,280px)] rounded-2xl overflow-hidden border border-[#EDE4D8] shadow-sm">
-                    <MandiMap 
-                      spots={[quest.activeSpot]} 
+                  <div className="mt-3 w-full max-w-[min(85vw,280px)] rounded-2xl overflow-hidden border border-[#EDE4D8] shadow-sm">
+                    <MandiMap
+                      spots={[quest.activeSpot]}
                       center={{ lat: quest.activeSpot.lat, lng: quest.activeSpot.lng }}
                       zoom={13}
                       className="h-28 w-full"
@@ -825,38 +944,35 @@ export default function MandiCompassApp() {
                   </div>
                 )}
 
-                {/* Live Stats — Refined */}
-                <div className="mt-7 text-center space-y-1.5">
+                {/* Live Stats */}
+                <div className="mt-5 text-center space-y-1.5">
                   <div className="text-3xl font-semibold tracking-[-1px] text-[#B4532A]">
-                    {formatDistance(liveDistance || 850)}
+                    {liveDistance > 0 ? formatDistance(liveDistance) : userPos ? '< 10 m' : 'Locating…'}
                   </div>
                   <div className="text-[#8A7665] text-sm tracking-wide">
-                    {etaMinutes || 11} MIN WALK &nbsp;·&nbsp; {Math.round(liveBearing)}° BEARING
+                    {liveDistance > 0
+                      ? `${etaMinutes} MIN WALK · ${Math.round(liveBearing)}° BEARING`
+                      : 'GPS signal acquiring…'}
                   </div>
                   {isCurrentlyAligned && (
                     <div className="inline-block mt-2 px-5 py-1 text-xs tracking-[1.5px] bg-[#3F5C42] text-[#F9F4ED] rounded-full font-medium">
-                      ALIGNED WITH THE TANNOUR
+                      ✦ ALIGNED WITH THE TANNOUR
                     </div>
                   )}
                 </div>
 
                 {/* Permission + Controls */}
-                <div className="flex flex-col items-center gap-2 mt-7 w-full max-w-xs">
-                  {permStatus !== 'granted' && compassSupported && (
+                <div className="flex flex-col items-center gap-2 mt-5 w-full max-w-xs">
+                  {/* Only show on iOS where a user gesture is genuinely required */}
+                  {isIOS && permStatus !== 'granted' && compassSupported && (
                     <button
                       onClick={requestPermission}
                       className="w-full py-3 rounded-2xl bg-[#2C2522] text-white text-sm font-semibold active:bg-black flex items-center justify-center gap-2"
                     >
-                      <Compass className="w-4 h-4" /> ENABLE REAL COMPASS {isIOS && "(iOS)"}
+                      <Compass className="w-4 h-4" /> ENABLE COMPASS (iOS)
                     </button>
                   )}
                   {permError && <div className="text-xs text-red-600 text-center">{permError}</div>}
-
-                  {manualHeading !== null && (
-                    <button onClick={resetManual} className="text-xs flex items-center gap-1 text-[#C45C26]">
-                      <RotateCcw className="w-3 h-3" /> Reset to device heading
-                    </button>
-                  )}
 
                   <button
                     onClick={handleClaimWithPhoto}
@@ -867,8 +983,8 @@ export default function MandiCompassApp() {
                     {isClaiming ? 'CLAIMING...' : 'I HAVE ARRIVED — CLAIM MY MANDI'}
                   </button>
                   <div className="text-[10px] text-center text-[#6B5F55] leading-tight max-w-[240px] px-2">
-                    On real devices the needle uses your phone’s magnetometer.<br />
-                    Tap the compass circle to manually rotate for testing.
+                    Red needle tip points toward your quest. Compass rose rotates with your device heading.<br />
+                    Tap the compass to manually set direction for desktop testing.
                   </div>
                 </div>
               </>
@@ -1101,7 +1217,7 @@ export default function MandiCompassApp() {
           { id: 'discover', label: 'Discover', icon: MapPin },
           { id: 'compass', label: 'Compass', icon: Compass },
           { id: 'passport', label: 'Passport', icon: Award },
-          { id: 'hall', label: 'Hall of Fame', icon: Award },
+          { id: 'hall', label: 'Hall', icon: Trophy },
           { id: 'lore', label: 'Lore', icon: BookOpen },
         ].map((tab) => {
           const Icon = tab.icon;

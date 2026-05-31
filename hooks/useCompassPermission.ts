@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 function isIOSDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
@@ -17,7 +17,7 @@ export function useCompassPermission() {
     setError(null);
 
     try {
-      // iOS 13+ requires explicit user-gesture call
+      // iOS 13+ requires an explicit user-gesture to unlock DeviceOrientationEvent
       if (
         typeof DeviceOrientationEvent !== 'undefined' &&
         typeof (DeviceOrientationEvent as any).requestPermission === 'function'
@@ -32,7 +32,8 @@ export function useCompassPermission() {
           return false;
         }
       } else {
-        // Android / desktop / older browsers — assume granted or will fail gracefully on listen
+        // Android / desktop / older browsers — permission is implicit.
+        // DeviceOrientationEvent fires without a gate; mark as granted.
         setStatus('granted');
         return true;
       }
@@ -42,6 +43,13 @@ export function useCompassPermission() {
       return false;
     }
   }, []);
+
+  // Auto-grant on non-iOS devices — they don't require user gesture
+  useEffect(() => {
+    if (!isIOS && status === 'idle') {
+      requestPermission();
+    }
+  }, [isIOS, status, requestPermission]);
 
   return { status, error, requestPermission, isIOS };
 }
