@@ -8,6 +8,9 @@ import {
 } from 'lucide-react';
 import { MandiMap } from '@/components/MandiMap';
 import { useNearbyMandi } from '@/hooks/useNearbyMandi';
+import { useAuth } from '@/lib/auth';
+import { AuthModal } from '@/components/AuthModal';
+import { supabase } from '@/lib/supabase';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 
@@ -16,6 +19,7 @@ import { useCompassPermission } from '@/hooks/useCompassPermission';
 import { useCompassHeading } from '@/hooks/useCompassHeading';
 import { useBearing } from '@/hooks/useBearing';
 import type { MandiSpot, UserFind, QuestState } from '@/types';
+import type { Conquest } from '@/lib/supabase';
 
 // Simple star rating component (Google-style)
 function StarRating({ rating, reviewCount }: { rating?: number; reviewCount?: number }) {
@@ -46,7 +50,10 @@ function StarRating({ rating, reviewCount }: { rating?: number; reviewCount?: nu
 
 // ============================================
 // MOCK DATA — Realistic authentic-leaning spots
-// (In production: replace with Google Places "mandi" + "yemeni" search)
+// Images sourced from Pexels (free for commercial use).
+// For production/demo polish, download these images into /public/images/mandi-spots/
+// and reference them locally for offline support + faster loading.
+// See agent research for exact recommended Pexels + Unsplash sources.
 // ============================================
 const MOCK_SPOTS: MandiSpot[] = [
   {
@@ -57,7 +64,7 @@ const MOCK_SPOTS: MandiSpot[] = [
     address: 'Deira, Dubai, UAE',
     rating: 4.6,
     priceLevel: 2,
-    photoUrl: 'https://picsum.photos/id/1018/600/400', // placeholder - real app uses Places photos
+    photoUrl: 'https://images.pexels.com/photos/28898628/pexels-photo-28898628.jpeg?auto=compress&cs=tinysrgb&w=800', // Authentic chicken mandi platter
   },
   {
     id: 'dubai-almarhabani',
@@ -67,7 +74,7 @@ const MOCK_SPOTS: MandiSpot[] = [
     address: 'Al Muraqqabat, Dubai',
     rating: 4.5,
     priceLevel: 2,
-    photoUrl: 'https://picsum.photos/id/106/600/400',
+    photoUrl: 'https://images.pexels.com/photos/18698228/pexels-photo-18698228.jpeg?auto=compress&cs=tinysrgb&w=800', // Traditional mandi-style platter
   },
   {
     id: 'hyderabad-barkas',
@@ -77,7 +84,7 @@ const MOCK_SPOTS: MandiSpot[] = [
     address: 'Barkas, Hyderabad, India',
     rating: 4.7,
     priceLevel: 2,
-    photoUrl: 'https://picsum.photos/id/292/600/400',
+    photoUrl: 'https://images.pexels.com/photos/7426867/pexels-photo-7426867.jpeg?auto=compress&cs=tinysrgb&w=800', // Generous family-style rice & meat
   },
   {
     id: 'jeddah-seddah',
@@ -87,7 +94,7 @@ const MOCK_SPOTS: MandiSpot[] = [
     address: 'Jeddah, Saudi Arabia',
     rating: 4.4,
     priceLevel: 3,
-    photoUrl: 'https://picsum.photos/id/160/600/400',
+    photoUrl: 'https://images.pexels.com/photos/18698231/pexels-photo-18698231.jpeg?auto=compress&cs=tinysrgb&w=800', // Classic Gulf mandi presentation
   },
 ];
 
@@ -108,6 +115,28 @@ const SPOT_DESCRIPTIONS: Record<string, string> = {
 // ============================================
 const STORAGE_KEY = 'mandi-compass-finds';
 const QUEST_KEY = 'mandi-compass-quest';
+
+type HallOfFameEntry = Conquest & {
+  source: 'supabase' | 'local';
+};
+
+function mapFindsToHallEntries(finds: UserFind[]): HallOfFameEntry[] {
+  return finds.map((find) => ({
+    id: `local-${find.claimedAt}-${find.spot.id}`,
+    user_id: 'local-browser',
+    spot_name: find.spot.name,
+    spot_address: find.spot.address,
+    lat: find.spot.lat,
+    lng: find.spot.lng,
+    photo_url: find.photoDataUrl || find.spot.photoUrl || '',
+    authenticity_rating: find.authenticityRating,
+    distance_walked: find.distanceWalked ?? null,
+    claimed_at: find.claimedAt,
+    badge: find.badge,
+    created_at: find.claimedAt,
+    source: 'local',
+  }));
+}
 
 function loadFinds(): UserFind[] {
   if (typeof window === 'undefined') return [];
@@ -137,13 +166,20 @@ function saveQuest(quest: QuestState) {
 // MAIN APP
 // ============================================
 export default function MandiCompassApp() {
-  const [activeTab, setActiveTab] = useState<'discover' | 'compass' | 'passport' | 'lore'>('discover');
+  const [activeTab, setActiveTab] = useState<'discover' | 'compass' | 'passport' | 'hall' | 'lore'>('discover');
   const [finds, setFinds] = useState<UserFind[]>([]);
   const [quest, setQuest] = useState<QuestState>({ activeSpot: null });
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedSpot, setSelectedSpot] = useState<MandiSpot | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
   const [manualHeading, setManualHeading] = useState<number | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const { user } = useAuth();
+
+  // Hall of Fame data
+  const [hallOfFame, setHallOfFame] = useState<HallOfFameEntry[]>([]);
+  const [loadingHall, setLoadingHall] = useState(false);
 
   // Real Google Places integration (now with auto + distance sorting)
   const {
@@ -251,6 +287,7 @@ export default function MandiCompassApp() {
     setIsClaiming(true);
 
     let photoDataUrl: string;
+    let finalPhotoUrl = '';
 
     if (photoFile) {
       // Read real photo from device
@@ -259,9 +296,37 @@ export default function MandiCompassApp() {
         reader.onload = () => resolve(reader.result as string);
         reader.readAsDataURL(photoFile);
       });
+
+      // If user is logged in, upload to Supabase Storage
+      if (user) {
+        try {
+          const fileExt = photoFile.name.split('.').pop();
+          const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('conquest-photos')
+            .upload(fileName, photoFile, {
+              cacheControl: '3600',
+              upsert: false,
+            });
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('conquest-photos')
+            .getPublicUrl(fileName);
+
+          finalPhotoUrl = publicUrl;
+        } catch (err) {
+          console.error('Upload failed, using local data URL:', err);
+          finalPhotoUrl = photoDataUrl; // fallback
+        }
+      } else {
+        finalPhotoUrl = photoDataUrl;
+      }
     } else {
-      // Fallback nice placeholder if user skips photo
-      photoDataUrl = `https://picsum.photos/id/${Math.floor(Math.random() * 40) + 10}/800/600`;
+      finalPhotoUrl = 'https://images.pexels.com/photos/28898628/pexels-photo-28898628.jpeg?auto=compress&cs=tinysrgb&w=800';
+      photoDataUrl = finalPhotoUrl;
     }
 
     const distanceAtClaim = userPos && spot 
@@ -271,16 +336,37 @@ export default function MandiCompassApp() {
     const newFind: UserFind = {
       spot,
       claimedAt: new Date().toISOString(),
-      photoDataUrl,
+      photoDataUrl: finalPhotoUrl,
       authenticityRating: 4 + Math.random() * 1,
       notes: "",
       distanceWalked: Math.round(distanceAtClaim),
       badge: distanceAtClaim < 400 ? 'gold' : distanceAtClaim < 1200 ? 'silver' : 'bronze',
     };
 
+    // Save locally for immediate UI
     const updated = [newFind, ...finds];
     setFinds(updated);
     saveFinds(updated);
+
+    // Save to Supabase if logged in
+    if (user) {
+      try {
+        await supabase.from('conquests').insert({
+          user_id: user.id,
+          spot_name: spot.name,
+          spot_address: spot.address,
+          lat: spot.lat,
+          lng: spot.lng,
+          photo_url: finalPhotoUrl,
+          authenticity_rating: newFind.authenticityRating,
+          distance_walked: newFind.distanceWalked,
+          claimed_at: newFind.claimedAt,
+          badge: newFind.badge,
+        });
+      } catch (err) {
+        console.error('Failed to save conquest to Supabase:', err);
+      }
+    }
 
     setQuest({ activeSpot: null });
     setSelectedSpot(null);
@@ -291,7 +377,9 @@ export default function MandiCompassApp() {
 
     setTimeout(() => {
       toast(`Mandi Find claimed — ${newFind.badge.toUpperCase()}!`, {
-        description: `${spot.name} added to your Passport. Beautiful work, Seeker.`,
+        description: user 
+          ? `${spot.name} added to the Hall of Fame.` 
+          : `${spot.name} added to your Passport. Sign in to share it publicly.`,
       });
     }, 420);
   };
@@ -351,6 +439,13 @@ export default function MandiCompassApp() {
     }
   }, [activeTab, hasRealData, hasAttemptedRealSearch, realSpots.length, isSearchingPlaces]);
 
+  // Load Hall of Fame when tab is opened
+  useEffect(() => {
+    if (activeTab === 'hall') {
+      loadHallOfFame();
+    }
+  }, [activeTab]);
+
   // Current spots to display
   // Rule: Once user has tried real search, we stay in "near me" mode.
   // We do NOT show far-away demo spots if real search returned nothing.
@@ -372,6 +467,44 @@ export default function MandiCompassApp() {
   };
 
   const resetManual = () => setManualHeading(null);
+
+  // Load Hall of Fame
+  const loadHallOfFame = async () => {
+    setLoadingHall(true);
+
+    const localEntries = mapFindsToHallEntries(loadFinds());
+
+    const { data, error } = await supabase
+      .from('conquests')
+      .select('*')
+      .order('claimed_at', { ascending: false })
+      .limit(30);
+
+    const remoteEntries: HallOfFameEntry[] = (!error && data)
+      ? data.map((conquest) => ({
+          ...conquest,
+          source: 'supabase' as const,
+        }))
+      : [];
+
+    const seen = new Set<string>();
+    const merged = [...remoteEntries, ...localEntries].filter((entry) => {
+      const signature = [
+        entry.claimed_at,
+        entry.spot_name,
+        entry.lat,
+        entry.lng,
+        entry.badge,
+      ].join('|');
+
+      if (seen.has(signature)) return false;
+      seen.add(signature);
+      return true;
+    });
+
+    setHallOfFame(merged);
+    setLoadingHall(false);
+  };
 
   // ============================================
   // ENTERTAINING PASSPORT SYSTEM
@@ -422,14 +555,29 @@ export default function MandiCompassApp() {
             <div className="text-[10px] text-[#8A7665] -mt-0.5 tracking-[0.5px] hidden sm:block">EST. 2025 — FOLLOW THE TANNOUR</div>
           </div>
         </div>
-        {quest.activeSpot && (
-          <button 
-            onClick={clearQuest}
-            className="text-xs px-4 py-2 min-h-[38px] rounded-full border border-[#B4532A]/25 text-[#B4532A] hover:bg-[#B4532A]/5 active:bg-[#B4532A]/10 flex items-center gap-1.5 font-medium transition-colors"
-          >
-            <X className="w-3.5 h-3.5" /> End Quest
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {quest.activeSpot && (
+            <button 
+              onClick={clearQuest}
+              className="text-xs px-4 py-2 min-h-[38px] rounded-full border border-[#B4532A]/25 text-[#B4532A] hover:bg-[#B4532A]/5 active:bg-[#B4532A]/10 flex items-center gap-1.5 font-medium transition-colors"
+            >
+              <X className="w-3.5 h-3.5" /> End Quest
+            </button>
+          )}
+
+          {!user ? (
+            <button 
+              onClick={() => setShowAuthModal(true)}
+              className="text-sm px-4 py-2 rounded-full bg-[#B4532A] text-white font-medium active:bg-[#8C3F20]"
+            >
+              Sign In
+            </button>
+          ) : (
+            <div className="text-xs text-[#8A7665] hidden sm:block">
+              {user.email?.split('@')[0]}
+            </div>
+          )}
+        </div>
       </header>
 
       {/* MAIN CONTENT AREA */}
@@ -539,7 +687,13 @@ export default function MandiCompassApp() {
               ) : displaySpots.map((spot) => (
                 <div key={spot.id} className="mandi-card rounded-3xl overflow-hidden shadow-sm">
                   <div className="relative h-44">
-                    <img src={spot.photoUrl} alt={spot.name} className="absolute inset-0 w-full h-full object-cover" />
+                    <img 
+                      src={spot.photoUrl || 'https://images.pexels.com/photos/28898628/pexels-photo-28898628.jpeg?auto=compress&cs=tinysrgb&w=800'} 
+                      alt={spot.name} 
+                      className="absolute inset-0 w-full h-full object-cover" 
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
                       <div className="flex items-baseline justify-between">
                         <div>
@@ -868,6 +1022,53 @@ export default function MandiCompassApp() {
           </div>
         )}
 
+        {/* HALL OF FAME */}
+        {activeTab === 'hall' && (
+          <div className="p-5 max-w-xl mx-auto">
+            <div className="mb-6">
+              <div className="text-[#B4532A] text-[10px] tracking-[2px]">COMMUNITY</div>
+              <h2 className="text-3xl font-semibold tracking-[-0.8px]">Hall of Fame</h2>
+              <p className="text-[#5C5148] mt-1">Recent conquests from fellow seekers.</p>
+            </div>
+
+            {loadingHall ? (
+              <div className="text-center py-12 text-[#8A7665]">Loading legends...</div>
+            ) : hallOfFame.length === 0 ? (
+              <div className="bg-white border border-[#EDE4D8] rounded-3xl p-8 text-center">
+                <div className="text-5xl mb-4">🏆</div>
+                <p className="text-[#5C5148]">
+                  No conquests yet. Be the first legend.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {hallOfFame.map((conquest, index) => (
+                  <div key={index} className="bg-white border border-[#EDE4D8] rounded-3xl overflow-hidden">
+                    <img 
+                      src={conquest.photo_url} 
+                      alt={conquest.spot_name} 
+                      className="w-full h-48 object-cover" 
+                    />
+                    <div className="p-4">
+                      <div className="font-semibold">{conquest.spot_name}</div>
+                      <div className="text-sm text-[#5C5148]">{conquest.spot_address}</div>
+                      <div className="flex items-center gap-2 mt-2 text-sm">
+                        <span className="text-[#B4532A]">★ {conquest.authenticity_rating}</span>
+                        <span className="text-[#8A7665]">• {conquest.badge}</span>
+                        {conquest.source === 'local' && (
+                          <span className="text-[#2A3F35] bg-[#2A3F35]/10 px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-[1px]">
+                            Local
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* LORE / MINI ENTERTAINMENT */}
         {activeTab === 'lore' && (
           <div className="p-5 max-w-md mx-auto">
@@ -900,6 +1101,7 @@ export default function MandiCompassApp() {
           { id: 'discover', label: 'Discover', icon: MapPin },
           { id: 'compass', label: 'Compass', icon: Compass },
           { id: 'passport', label: 'Passport', icon: Award },
+          { id: 'hall', label: 'Hall of Fame', icon: Award },
           { id: 'lore', label: 'Lore', icon: BookOpen },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -954,6 +1156,9 @@ export default function MandiCompassApp() {
         )}
       </AnimatePresence>
 
+      {/* AUTH MODAL */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
       {/* MANDI DETAILS MODAL — replaces the old placeholder toast */}
       <AnimatePresence>
         {selectedSpot && (
@@ -972,10 +1177,13 @@ export default function MandiCompassApp() {
               {/* Hero Photo */}
               <div className="relative h-48 sm:h-56">
                 <img 
-                  src={selectedSpot.photoUrl} 
+                  src={selectedSpot.photoUrl || 'https://images.pexels.com/photos/28898628/pexels-photo-28898628.jpeg?auto=compress&cs=tinysrgb&w=800'} 
                   alt={selectedSpot.name} 
                   className="absolute inset-0 w-full h-full object-cover" 
+                  loading="lazy"
+                  decoding="async"
                 />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/60" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/70" />
                 
                 <button 
