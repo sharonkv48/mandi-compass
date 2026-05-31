@@ -1,22 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  /* Mandi Compass warm, respectful, appetizing palette */
-  --bg: #FDF8F3;           /* Warm cream */
-  --bg-elevated: #F5EDE3;
-  --text: #2C2522;         /* Rich charcoal */
-  --text-muted: #6B5F55;
-  --accent: #C45C26;       /* Terracotta / saffron warmth */
-  --accent-dark: #9C451C;
-  --gold: #C5A26F;         /* Soft gold */
-  --green: #2F4A3E;        /* Herb / deep green */
-  --success: #4A7043;
-  --warning: #D97706;
+  /* Premium Mandi Compass — refined, warm, and elevated */
+  --bg: #F9F4ED;              /* Rich warm cream */
+  --bg-elevated: #F1E9DF;
+  --bg-subtle: #EDE4D8;
+  --text: #1F1A17;            /* Deep charcoal */
+  --text-muted: #5C5148;
+  --text-secondary: #8A7665;
 
-  /* Compass specific */
-  --compass-bg: #F5EDE3;
-  --compass-needle: #C45C26;
-  --compass-ring: #2C2522;
+  --accent: #B4532A;          /* Rich terracotta */
+  --accent-dark: #8C3F20;
+  --gold: #C5A46E;            /* Muted luxury gold */
+  --gold-dark: #A17C45;
+  --green: #2A3F35;           /* Deep olive */
+
+  --success: #3F5C42;
+  --warning: #C17F2E;
+
+  /* Compass */
+  --compass-bg: #F1E9DF;
+  --compass-needle: #B4532A;
+  --compass-ring: #1F1A17;
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -46,34 +51,40 @@ h1, .display {
   font-family: var(--font-amiri), var(--font-geist-sans);
 }
 
-/* Mandi-themed components */
+/* Premium Card Treatment */
 .mandi-card {
   transition: transform 0.2s cubic-bezier(0.23, 1.0, 0.32, 1), 
-              box-shadow 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
+              box-shadow 0.2s cubic-bezier(0.23, 1.0, 0.32, 1),
+              border-color 0.2s ease;
   background: white;
-  border: 1px solid #EDE4D8;
+  border: 1px solid var(--bg-subtle);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
 }
 
 .mandi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  box-shadow: 0 12px 24px -8px rgb(0 0 0 / 0.08), 
+              0 4px 8px -4px rgb(0 0 0 / 0.04);
 }
 
 .compass-container {
   background: var(--compass-bg);
-  border: 1px solid #EDE4D8;
+  border: 1px solid var(--bg-subtle);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6),
+              0 4px 12px rgb(0 0 0 / 0.06);
 }
 
 .compass-needle {
-  transition: transform 0.08s linear;
+  transition: transform 0.08s cubic-bezier(0.23, 1.0, 0.32, 1);
   transform-origin: center;
   color: var(--compass-needle);
-  filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.15));
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.2));
 }
 
-/* Card flip for Passport (Culture Compass inspired) */
+/* Premium Passport Cards */
 .flip-card {
-  perspective: 1000px;
+  perspective: 1200px;
   height: 100%;
 }
 
@@ -81,8 +92,8 @@ h1, .display {
   position: relative;
   width: 100%;
   height: 100%;
-  text-align: center;
-  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  text-align: left;
+  transition: transform 0.65s cubic-bezier(0.23, 1.0, 0.32, 1);
   transform-style: preserve-3d;
 }
 
@@ -96,24 +107,54 @@ h1, .display {
   height: 100%;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  border-radius: 16px;
+  border-radius: 20px;
   overflow: hidden;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.06);
+}
+
+.flip-card-front {
+  border: 1px solid var(--bg-subtle);
 }
 
 .flip-card-back {
   transform: rotateY(180deg);
+  background: var(--green);
+  color: #F9F4ED;
+  border: 1px solid #3A4F45;
 }
 
-/* Bottom nav for PWA feel */
+/* Premium Bottom Navigation */
 .bottom-nav {
-  background: rgba(253, 248, 243, 0.95);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid #EDE4D8;
+  background: rgba(249, 244, 237, 0.96);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--bg-subtle);
 }
 
-/* Fun micro-interactions */
+/* Premium Buttons */
 .quest-button {
-  transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: all 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.quest-button::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -100%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.25),
+    transparent
+  );
+  transition: left 0.6s;
+}
+
+.quest-button:hover::after {
+  left: 250%;
 }
 
 .quest-button:active {

@@ -410,22 +410,22 @@ export default function MandiCompassApp() {
   // RENDER
   // ============================================
   return (
-    <div className="min-h-screen flex flex-col bg-[#FDF8F3] text-[#2C2522] font-sans">
+    <div className="min-h-screen flex flex-col bg-[#F9F4ED] text-[#1F1A17] font-sans">
       {/* Top Bar */}
-      <header className="sticky top-0 z-50 bg-[#FDF8F3]/95 backdrop-blur border-b border-[#EDE4D8] px-5 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#C45C26] flex items-center justify-center text-white flex-shrink-0">
-            <Compass className="w-4 h-4 sm:w-5 sm:h-5" />
+      <header className="sticky top-0 z-50 bg-[#F9F4ED]/95 backdrop-blur-xl border-b border-[#EDE4D8] px-5 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-9 h-9 rounded-2xl bg-[#B4532A] flex items-center justify-center text-white flex-shrink-0 shadow-sm">
+            <Compass className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0">
-            <div className="font-semibold tracking-tight text-lg sm:text-xl truncate">Mandi Compass</div>
-            <div className="text-[10px] text-[#6B5F55] -mt-1 hidden sm:block">Follow the tannour</div>
+            <div className="font-semibold tracking-[-0.3px] text-xl sm:text-2xl">Mandi Compass</div>
+            <div className="text-[10px] text-[#8A7665] -mt-0.5 tracking-[0.5px] hidden sm:block">EST. 2025 — FOLLOW THE TANNOUR</div>
           </div>
         </div>
         {quest.activeSpot && (
           <button 
             onClick={clearQuest}
-            className="text-xs px-3 py-1.5 min-h-[36px] rounded-full border border-[#C45C26]/30 text-[#C45C26] hover:bg-[#C45C26]/5 flex items-center gap-1"
+            className="text-xs px-4 py-2 min-h-[38px] rounded-full border border-[#B4532A]/25 text-[#B4532A] hover:bg-[#B4532A]/5 active:bg-[#B4532A]/10 flex items-center gap-1.5 font-medium transition-colors"
           >
             <X className="w-3.5 h-3.5" /> End Quest
           </button>
@@ -438,11 +438,10 @@ export default function MandiCompassApp() {
         {activeTab === 'discover' && (
           <div className="p-5 max-w-xl mx-auto">
             <div className="mb-6">
-              <div className="text-[#C45C26] text-xs tracking-[2px] font-medium mb-1">THE JOURNEY BEGINS</div>
-              <h1 className="text-4xl font-semibold tracking-tighter leading-none">Find your Mandi.<br />Follow the compass.</h1>
-              <p className="mt-3 text-[#6B5F55] max-w-sm">
-                Authentic Yemeni pit-cooked Mandi is rare and worth the hunt. 
-                These spots are chosen with care for tradition and flavor.
+              <div className="text-[#B4532A] text-[10px] tracking-[2px] font-medium mb-1.5">THE JOURNEY BEGINS</div>
+              <h1 className="text-[34px] leading-none font-semibold tracking-[-1.2px]">Find your Mandi.<br />Follow the compass.</h1>
+              <p className="mt-4 text-[#5C5148] max-w-[320px] text-[15px] leading-relaxed">
+                Authentic Yemeni pit-cooked Mandi is rare. These are the places worth the journey.
               </p>
 
               {/* Real data controls - nice automatic flow */}
@@ -610,48 +609,51 @@ export default function MandiCompassApp() {
                   <div className="text-sm text-[#6B5F55]">{quest.activeSpot.address}</div>
                 </div>
 
-                {/* THE BIG COMPASS */}
+                {/* THE BIG COMPASS — Premium Instrument */}
                 <div 
-                  className="compass-container relative w-[min(85vw,280px)] h-[min(85vw,280px)] rounded-full mt-6 flex items-center justify-center cursor-pointer select-none active:scale-[0.985] transition-transform"
+                  className="compass-container relative w-[min(85vw,300px)] h-[min(85vw,300px)] rounded-full mt-5 flex items-center justify-center cursor-pointer select-none active:scale-[0.985] transition-all duration-200"
                   onClick={handleManualCompass}
-                  title="Click or tap to rotate manually (great for desktop testing)"
+                  title="Tap to manually rotate"
                 >
-                  {/* Outer ring + tick marks */}
-                  <div className="absolute inset-3 rounded-full border-[6px] border-[#2C2522]/10" />
+                  {/* Outer rings for depth */}
+                  <div className="absolute inset-2 rounded-full border border-[#1F1A17]/10" />
+                  <div className="absolute inset-4 rounded-full border border-[#1F1A17]/5" />
                   
                   {/* Cardinal directions */}
                   {['N', 'E', 'S', 'W'].map((dir, i) => (
-                    <div key={i} className="absolute text-[11px] font-mono text-[#6B5F55] font-medium"
+                    <div key={i} className="absolute text-xs font-mono text-[#8A7665] tracking-[1px]"
                       style={{ 
-                        top: i === 0 ? 18 : i === 2 ? 'auto' : '50%', 
-                        bottom: i === 2 ? 18 : 'auto',
-                        left: i === 3 ? 22 : i === 1 ? 'auto' : '50%',
-                        right: i === 1 ? 22 : 'auto',
+                        top: i === 0 ? 22 : i === 2 ? 'auto' : '50%', 
+                        bottom: i === 2 ? 22 : 'auto',
+                        left: i === 3 ? 26 : i === 1 ? 'auto' : '50%',
+                        right: i === 1 ? 26 : 'auto',
                         transform: i % 2 === 1 ? 'translateY(-50%)' : 'translateX(-50%)'
                       }}>
                       {dir}
                     </div>
                   ))}
 
-                  {/* Rotating Needle Group */}
+                  {/* Rotating Needle */}
                   <motion.div 
-                    className="compass-needle absolute leading-none drop-shadow-xl z-10"
+                    className="compass-needle absolute leading-none z-10"
                     style={{ 
-                      fontSize: 'clamp(4.5rem, 22vw, 7rem)',
+                      fontSize: 'clamp(5rem, 24vw, 7.5rem)',
                       transform: `rotate(${needleRotation}deg)` 
                     }}
                     animate={{ rotate: needleRotation }}
-                    transition={{ type: "spring", stiffness: 60, damping: 18 }}
+                    transition={{ type: "spring", stiffness: 55, damping: 16 }}
                   >
                     ↑
                   </motion.div>
 
-                  {/* Center hub */}
-                  <div className="absolute w-7 h-7 bg-[#2C2522] rounded-full z-20 ring-4 ring-[#FDF8F3]" />
+                  {/* Refined center hub */}
+                  <div className="absolute w-8 h-8 bg-[#1F1A17] rounded-full z-20 flex items-center justify-center ring-[6px] ring-[#F9F4ED]">
+                    <div className="w-2 h-2 bg-[#C5A46E] rounded-full" />
+                  </div>
 
-                  {/* Alignment ring */}
+                  {/* Alignment indicator */}
                   {isCurrentlyAligned && (
-                    <div className="aligned absolute inset-8 rounded-full border-4 border-[#4A7043] opacity-60" />
+                    <div className="aligned absolute inset-10 rounded-full border-[3px] border-[#3F5C42]" />
                   )}
                 </div>
 
@@ -669,17 +671,18 @@ export default function MandiCompassApp() {
                   </div>
                 )}
 
-                {/* Live Stats */}
-                <div className="mt-8 text-center font-mono text-sm space-y-1">
-                  <div className="flex items-center justify-center gap-2 text-2xl font-semibold tracking-tighter text-[#C45C26]">
+                {/* Live Stats — Refined */}
+                <div className="mt-7 text-center space-y-1.5">
+                  <div className="text-3xl font-semibold tracking-[-1px] text-[#B4532A]">
                     {formatDistance(liveDistance || 850)}
-                    <span className="text-xs font-sans text-[#6B5F55] tracking-normal align-baseline">away</span>
                   </div>
-                  <div className="text-[#6B5F55]">
-                    ~{etaMinutes || 11} min walk • {Math.round(liveBearing)}° bearing
+                  <div className="text-[#8A7665] text-sm tracking-wide">
+                    {etaMinutes || 11} MIN WALK &nbsp;·&nbsp; {Math.round(liveBearing)}° BEARING
                   </div>
                   {isCurrentlyAligned && (
-                    <div className="inline-block mt-1 px-4 py-0.5 bg-[#4A7043] text-white text-xs rounded-full tracking-wider">YOU ARE POINTED TRUE</div>
+                    <div className="inline-block mt-2 px-5 py-1 text-xs tracking-[1.5px] bg-[#3F5C42] text-[#F9F4ED] rounded-full font-medium">
+                      ALIGNED WITH THE TANNOUR
+                    </div>
                   )}
                 </div>
 
@@ -726,17 +729,17 @@ export default function MandiCompassApp() {
             <div className="mb-6">
               <div className="flex items-end justify-between mb-3">
                 <div>
-                  <div className="text-[#C45C26] text-xs tracking-[2px] font-medium">YOUR JOURNEY</div>
-                  <h2 className="text-3xl font-semibold tracking-tighter">Mandi Passport</h2>
+                  <div className="text-[#B4532A] text-[10px] tracking-[2px]">YOUR JOURNEY</div>
+                  <h2 className="text-3xl font-semibold tracking-[-0.8px]">Mandi Passport</h2>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-semibold text-[#C45C26] tracking-tight">{passportStats.total}</div>
-                  <div className="text-[10px] text-[#6B5F55] -mt-1">FINDS</div>
+                  <div className="text-2xl font-semibold text-[#B4532A] tracking-tight tabular-nums">{passportStats.total}</div>
+                  <div className="text-[10px] text-[#8A7665] -mt-1 tracking-wider">FINDS</div>
                 </div>
               </div>
 
               {/* Seeker Level + Progress */}
-              <div className="bg-white border border-[#EDE4D8] rounded-3xl p-4">
+              <div className="bg-white border border-[#EDE4D8] rounded-3xl p-5">
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <div className="text-xs text-[#6B5F55]">CURRENT RANK</div>
@@ -771,14 +774,14 @@ export default function MandiCompassApp() {
                   {achievements.map((ach) => (
                     <div 
                       key={ach.id}
-                      className={`px-3 py-1.5 rounded-2xl text-xs flex items-center gap-1.5 border transition-all ${
+                      className={`px-3.5 py-1.5 rounded-2xl text-xs flex items-center gap-1.5 border transition-all ${
                         ach.unlocked 
-                          ? 'bg-[#2F4A3E] text-[#FDF8F3] border-[#2F4A3E]' 
-                          : 'bg-white text-[#6B5F55] border-[#EDE4D8] opacity-50'
+                          ? 'bg-[#2A3F35] text-[#F9F4ED] border-[#2A3F35]' 
+                          : 'bg-white text-[#8A7665] border-[#EDE4D8] opacity-50'
                       }`}
                     >
-                      <span>{ach.icon}</span>
-                      <span>{ach.label}</span>
+                      <span className="text-base leading-none">{ach.icon}</span>
+                      <span className="font-medium">{ach.label}</span>
                     </div>
                   ))}
                 </div>
@@ -787,17 +790,17 @@ export default function MandiCompassApp() {
 
             {/* The Actual Passport Entries */}
             {finds.length === 0 ? (
-              <div className="bg-white border border-[#EDE4D8] rounded-3xl p-8 text-center">
-                <div className="text-5xl mb-4">🗺️</div>
-                <div className="font-semibold text-xl tracking-tight mb-2">The tannour is waiting.</div>
-                <p className="text-[#6B5F55] text-sm leading-relaxed max-w-[260px] mx-auto">
-                  Your passport is empty. Complete your first quest and claim a real mandi find to begin your legend.
+              <div className="bg-white border border-[#EDE4D8] rounded-3xl p-9 text-center">
+                <div className="text-6xl mb-5 opacity-80">🗺️</div>
+                <div className="font-semibold text-2xl tracking-[-0.4px] mb-3">The tannour awaits.</div>
+                <p className="text-[#5C5148] text-[15px] leading-relaxed max-w-[280px] mx-auto">
+                  Your passport is empty. Begin your first quest and start collecting the rarest mandi experiences.
                 </p>
                 <button 
                   onClick={() => setActiveTab('discover')}
-                  className="mt-6 px-6 py-3 rounded-2xl bg-[#C45C26] text-white text-sm font-semibold active:bg-[#9C451C]"
+                  className="mt-7 px-8 py-3.5 rounded-2xl bg-[#B4532A] text-white text-sm font-medium active:bg-[#8C3F20] transition-colors"
                 >
-                  Start Your First Quest
+                  Begin Your Journey
                 </button>
               </div>
             ) : (
