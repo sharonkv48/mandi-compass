@@ -13,6 +13,7 @@ export interface MandiSpot {
   userRatingCount?: number; // number of Google reviews
   priceLevel?: number; // 1-4
   photoUrl?: string;   // Can be Places photo ref or static URL
+  fallbackPhotoUrl?: string; // Local/stock photo to use if photoUrl fails
   distance?: number;   // populated at runtime
 }
 
